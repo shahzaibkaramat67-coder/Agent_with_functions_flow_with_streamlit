@@ -2,7 +2,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from function_tool.rage_response import Rag_response
-from sentence_transformers import CrossEncoder
 import os
 
 
@@ -30,13 +29,14 @@ def retriver_ChromaDB(query):
         
         
 
-        template = ChatPromptTemplate.from_template(
+        template = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """ 
-                    You are a helpful AI assistant. Use only the provided context to answer the question.
-                    If the answer is not present in the context, say 'I could not find the answer in the document.'
+                    """
+                    You are a helpful AI assistant. Use only the provided context to
+                    answer the question. If the answer is not present in the context,
+                    say 'I could not find the answer in the document.'
                     """,
                 ),
                 ("human", "user Question: {query}\n\nContext:\n{content}"),
@@ -46,35 +46,21 @@ def retriver_ChromaDB(query):
         relevant_docs = retriever.invoke(query)
 
         print("relevant_docs", relevant_docs)
-        
-        pair = [query, doc.page_content for doc in relevant_docs]
-        print("relevant_docs  pair", pair)
-        
-            
-        reranker = CrossEncoder(reranker_model)
-        
-        print("relevant_docs pair reranker  ", reranker)
-        
-        rerank_docs_score = reranker.predict(pair)
-        print("relevant_docs pair reranker  rerank_docs_score", rerank_docs_score)
+        if reranker_model:
+            from sentence_transformers import CrossEncoder
 
-        relevant_docs = retriever.invoke(query)
-        print("relevant_docs pair reranker  rerank_docs_score  relevant_docs", relevant_docs)
-        
-        ranked_docs = sorted(zip(rerank_docs_score,relevant_docs), key=lambda x: x[0], reverse=True)
-        print("relevant_docs pair reranker  rerank_docs_score  relevant_docs  ranked_docs", ranked_docs)
-        
-        most_ralivent_docs = [docs for docs in ranked_docs[:4]]
+            reranker = CrossEncoder(reranker_model)
+            pairs = [(query, doc.page_content) for doc in relevant_docs]
+            scores = reranker.predict(pairs)
+            relevant_docs = [
+                doc
+                for _, doc in sorted(
+                    zip(scores, relevant_docs), key=lambda item: item[0], reverse=True
+                )
+            ]
 
-        print("most_ralivent_docs: ", most_ralivent_docs)
-
-                
-        
-        
-
-        # print("relevant_docs", relevant_docs)
-
-        content = "\n\n".join(doc.page_content for doc in most_ralivent_docs)
+        most_relevant_docs = relevant_docs[:4]
+        content = "\n\n".join(doc.page_content for doc in most_relevant_docs)
 
         prompt = template.invoke({"query": query, "content": content})
         return Rag_response(prompt)

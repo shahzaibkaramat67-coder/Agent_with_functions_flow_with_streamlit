@@ -1,5 +1,4 @@
 from Tools.search.search import search
-from Tools.Rag.retrive import retriver_ChromaDB
 
 
 def Tool_run(tool_name, query):
@@ -9,6 +8,8 @@ def Tool_run(tool_name, query):
         if tool_name == "search":
             return search(query)
         if tool_name == "rag":
+            from Tools.Rag.retrive import retriver_ChromaDB
+
             return retriver_ChromaDB(query)
         if tool_name == "none":
             return "none"

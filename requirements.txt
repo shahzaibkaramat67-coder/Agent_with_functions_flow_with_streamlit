@@ -10,6 +10,7 @@ google-generativeai
 google-genai
 openai
 groq
+torchvision
 mistralai
 openrouter
 chromadb
