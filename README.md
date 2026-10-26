@@ -1,118 +1,68 @@
 # Agent with Function Flow with Streamlit
 
-A Streamlit AI research assistant that combines document-based RAG, web search, and a function-driven planning loop to answer user questions with context-aware reasoning.
+A Python-based AI research assistant built with Streamlit, LangChain, and Gemini-powered reasoning. The application lets users upload documents, build a local vector index, and ask questions that can be answered using document retrieval, web search, or a multi-step agent workflow.
 
-This project is designed as an interactive "research desk" where a user can upload a document, build a searchable vector index, and ask questions that may be answered from either the uploaded content or the live web. The app uses an agent workflow to decide whether a question should be answered from a local document store, a search engine, or a combination of both.
+This project demonstrates a practical "agentic RAG" pattern: the app selects tools, evaluates whether enough information has been gathered, and plans follow-up actions before returning a final response.
 
-## Overview
+## Demo / Overview
 
-The app works in three layers:
+The application provides a single research workspace where users can:
 
-1. User interface: a Streamlit app for uploading documents, setting API keys, and interacting with the assistant.
-2. Agent orchestration: a multi-step loop that rewrites the question, selects a tool, evaluates whether the result is sufficient, and plans the next action.
-3. Retrieval and generation: a local RAG pipeline backed by ChromaDB plus web search support through Tavily.
+- upload PDFs, TXT, or DOCX files
+- create a searchable ChromaDB vector index
+- ask questions grounded in the uploaded document
+- perform live web searches with Tavily
+- let an AI agent reason across tools and decide the next step
+- inspect logs and intermediate agent decisions in the app UI
 
-The code is organized around a single main app entry point plus modular components for the LLM, tool selection, evaluation, planning, and retrieval.
+## Why This Project
+
+This project is useful for anyone building:
+
+- document-based AI assistants
+- research copilots
+- local knowledge-base Q&A apps
+- tool-using LLM workflows
+- prototype agentic systems for search + retrieval + reasoning
+
+It is intentionally built as a modular learning project, making it easy to understand how tool routing, evaluation, planning, and retrieval fit together in a real application.
 
 ## Key Features
 
-- Streamlit-based chat interface
-- Upload PDF, TXT, and DOCX documents
-- Build a local vector index from uploaded documents
-- Search the web with Tavily
-- Use a retrieval-augmented generation flow over the indexed document
-- Run an iterative agent loop with tool selection, evaluation, and replanning
-- Display intermediate step logs for transparency and debugging
-- Configure Gemini model and API settings from the app sidebar
+- Streamlit chat-based user interface
+- PDF, TXT, and DOCX ingestion
+- Local vector database indexing using Chroma
+- Hugging Face embeddings support
+- Tavily-based web search integration
+- Agentic workflow with tool selection and evaluation
+- Multi-step reasoning loop with planner logic
+- Detailed execution logs for transparency
+- Environment-based API configuration
 
-## Architecture
+## System Architecture
 
-### 1. Streamlit Frontend
+The project follows a layered architecture:
 
-`main.py` is the main application entry point. It handles:
+1. Frontend layer
+   - `main.py` handles the Streamlit UI and user interaction.
 
-- app configuration via `st.set_page_config()`
-- sidebar configuration for API keys and model names
-- document upload and indexing
-- chat-based interaction with the assistant
-- execution logs and step-by-step outputs
+2. Agent orchestration layer
+   - `Agentic_Agent/piplimimg.py` manages the main reasoning loop.
+   - It rewrites the user question, selects a tool, evaluates results, retries when needed, and produces the final answer.
 
-The app stores session state for:
+3. Tool layer
+   - `function_tool/` contains modules for tool selection, execution, evaluation, planning, and final answer generation.
 
-- chat history
-- indexing status
-- logs
-- conversation steps
+4. Retrieval layer
+   - `Tools/Rag/` handles document chunking, embedding, retrieval, and grounded answer generation.
 
-### 2. Agent Core
+5. Search layer
+   - `Tools/search/search.py` connects to Tavily to fetch live results for web-based questions.
 
-`Agentic_Agent/piplimimg.py` contains the main entry function:
+6. Model layer
+   - `Agentic_Agent/model.py` configures the Gemini LLM client and key handling.
 
-- `entryPoint(user_input, log_callback=None)`
-- Rewrites the user query
-- Selects the next tool using an LLM-based tool selector
-- Runs the tool
-- Evaluates whether enough information exists
-- Uses a planner to decide whether to continue with another search or RAG request
-- Returns a final answer along with steps and status
-
-This makes the project a function-calling style agent rather than a simple single-pass chatbot.
-
-### 3. Tool Selection and Planning
-
-The `function_tool/` package contains the logic for selecting tools and deciding the next move:
-
-- `tool_function.py`: chooses between `SEARCH`, `RAG`, and `NONE` based on the user query
-- `tool_run.py`: executes the selected tool
-- `evaluation.py`: checks whether the retrieved data is sufficient to answer the query
-- `planner.py`: decides whether the agent should continue searching or finish
-- `final_result.py`: formats the final answer using the LLM
-- `updateQuery.py`: rewrites or rephrases the input to improve tool usage
-
-### 4. Document Loader
-
-`fileLoder/fileLoder.py` supports multiple document types:
-
-- `.pdf` via `PyPDFLoader`
-- `.txt` via `TextLoader`
-- `.docx` via `Docx2txtLoader`
-- URLs via `WebBaseLoader`
-
-This gives the project flexibility for both local document ingestion and remote content loading.
-
-### 5. RAG Pipeline
-
-`Tools/Rag/system_setup.py` creates the Chroma vector store:
-
-- splits documents using `RecursiveCharacterTextSplitter`
-- embeds chunks using `HuggingFaceEmbeddings`
-- persists the database under `data/chroma_db`
-
-`Tools/Rag/retrive.py`:
-
-- loads the vector database
-- retrieves the most relevant documents using MMR search
-- optionally reranks results
-- constructs a prompt for the LLM
-- returns a grounded answer based strictly on the document context
-
-### 6. Web Search
-
-`Tools/search/search.py` calls the Tavily API to retrieve search results:
-
-- the query is sent to Tavily
-- result title, snippet content, and URL are formatted into a context string
-- that content is then passed back to the agent for evaluation and answer generation
-
-### 7. LLM Setup
-
-`Agentic_Agent/model.py` configures the model layer:
-
-- reads the Gemini API key from environment variables or the app session
-- reads the model name from `GEMINI_API_MODEL` or `GEMINI_API_MODEL_LITE`
-- uses `GoogleGenerativeAI` to create the LLM client
-
-## Project Structure
+## Repository Structure
 
 ```text
 .
@@ -148,53 +98,111 @@ This gives the project flexibility for both local document ingestion and remote 
 ├── main.py
 ├── requirements.txt
 ├── README.md
-└── uploads/
+├── uploads/
+└── data/
 ```
 
-## Dependencies
+## Core Components
 
-The project uses a large Python stack, including:
+### 1. Streamlit App
+File: `main.py`
 
-- streamlit
-- python-dotenv
-- langchain
-- langchain-core
-- langchain-community
-- langchain-google-genai
-- langchain-huggingface
-- langchain-text-splitters
-- google-generativeai
-- google-genai
-- openai
-- groq
-- mistralai
-- openrouter
-- chromadb
-- faiss-cpu
-- pypdf
-- beautifulsoup4
-- requests
-- tiktoken
-- tavily-python
-- pydantic
-- huggingface_hub
-- sentence-transformers
-- duckduckgo-search
-- ddgs
-- ollama
-- langchain_ollama
+The app provides:
+
+- sidebar configuration for Gemini model and API keys
+- file upload support for local knowledge indexing
+- a chat interface for question answering
+- status and log tracking for each request
+
+### 2. Agent Entry Point
+File: `Agentic_Agent/piplimimg.py`
+
+This is the heart of the project. It follows a loop similar to:
+
+- rewrite the user request
+- choose a tool (`SEARCH`, `RAG`, or `NONE`)
+- run the chosen tool
+- evaluate whether enough context has been found
+- either finalize the answer or plan another step
+
+### 3. Tool Selection and Evaluation
+Files in `function_tool/`
+
+- `tool_function.py`: determines which tool is best suited for the request
+- `tool_run.py`: executes the selected tool
+- `evaluation.py`: checks whether the returned information is sufficient
+- `planner.py`: decides whether the next action should be another search or a finish
+- `final_result.py`: produces the final answer with the LLM
+
+### 4. Document Loader
+File: `fileLoder/fileLoder.py`
+
+Supported inputs:
+
+- PDF
+- TXT
+- DOCX
+- URL-based web pages
+
+### 5. RAG Layer
+Files in `Tools/Rag/`
+
+- `system_setup.py` creates the Chroma vector store
+- `retrive.py` loads the index, retrieves relevant chunks, and builds a grounded answer prompt
+
+### 6. Search Layer
+File: `Tools/search/search.py`
+
+This module calls the Tavily API and turns search results into a usable context string for the agent.
+
+### 7. LLM Model Setup
+File: `Agentic_Agent/model.py`
+
+Responsible for:
+
+- loading API keys from environment variables
+- resolving the Gemini model name
+- creating the LLM instance used by the agent
+
+## Tech Stack
+
+- Python
+- Streamlit
+- LangChain
+- LangChain Community
+- LangChain Google GenAI
+- LangChain Hugging Face
+- ChromaDB
+- FAISS
+- Hugging Face Embeddings
+- Tavily API
+- Google Generative AI
+- PyPDF
 - python-docx
+- pydantic
+- dotenv
+- sentence-transformers
+
+## Prerequisites
+
+Before running the project, ensure the following are installed:
+
+- Python 3.10+
+- pip
+- Access to internet for external APIs
+- A valid Gemini API key
+- A valid Tavily API key if you want web search enabled
 
 ## Installation
 
-1. Clone the repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/shahzaibkaramat67-coder/Agent_with_functions_flow_with_streamlit.git
 cd Agent_with_functions_flow_with_streamlit
 ```
 
-2. Create a virtual environment
+Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
@@ -207,7 +215,7 @@ On Windows:
 venv\Scripts\activate
 ```
 
-3. Install dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -215,9 +223,7 @@ pip install -r requirements.txt
 
 ## Environment Variables
 
-Create a `.env` file in the project root and add the required keys.
-
-Example:
+Create a `.env` file in the project root:
 
 ```env
 GEMINI_NEW_API_KEY=your_gemini_api_key
@@ -226,71 +232,100 @@ TAVILY_API_KEY=your_tavily_api_key
 EMBADDING_MODEL_SENTENCE=sentence-transformers/all-MiniLM-L6-v2
 ```
 
-Notes:
+You can also enter some of these values directly in the Streamlit sidebar UI.
 
-- The app also allows these settings to be entered directly in the Streamlit sidebar.
-- The variable name `EMBADDING_MODEL_SENTENCE` appears as written in the code and should be used exactly unless the code is updated.
+## Running the Application
 
-## Run the App
+Start the app with:
 
 ```bash
 streamlit run main.py
 ```
 
-Then open the URL shown in the terminal, usually `http://localhost:8501`.
+Then open the local Streamlit URL shown in the terminal.
 
-## How It Works
+## How the App Works
 
-1. Upload a document from the sidebar.
-2. Click "Build document index" to split and embed the file.
-3. Wait for the vector database to be created in `data/chroma_db`.
-4. Ask a question in the chat input.
-5. The agent selects a tool based on the query:
-   - `RAG` if the document is likely relevant
-   - `SEARCH` if the answer likely requires live web content
-   - `NONE` if no external tool is needed
-6. The agent evaluates whether the retrieved information is sufficient.
-7. If needed, it creates a new query and continues the loop.
-8. The final LLM generates the final answer using the available information.
+1. Upload a document in the sidebar.
+2. Click the "Build document index" button.
+3. The app converts the document into text chunks and stores embeddings in Chroma.
+4. Ask a question in the chat interface.
+5. The agent decides whether the tool should be:
+   - `RAG` for document-grounded lookups
+   - `SEARCH` for live web search
+   - `NONE` when no external tool is required
+6. The result is evaluated to determine if the answer is sufficient.
+7. If more information is needed, the planner selects a new action.
+8. A final answer is generated and returned to the user.
 
-## Example Workflow
+## Example Use Cases
 
-A typical session may look like this:
+### Local knowledge Q&A
 
-- User uploads a PDF containing a product specification.
-- The document is indexed.
-- User asks: "Summarize the key features of this product."
-- The agent chooses `RAG` and retrieves the most relevant document chunks.
-- The LLM answers from those chunks.
+- Upload an internal document or technical PDF.
+- Ask: "Summarize the main risks described in this document."
+- The app retrieves the most relevant document chunks and answers from them.
 
-Another example:
+### Research assistant
 
-- User asks: "What is the latest information about climate policy in Europe?"
-- The agent chooses `SEARCH` and calls Tavily.
-- It evaluates the search results and composes a final answer.
+- Ask: "What are the latest developments in AI safety?"
+- The agent chooses the web search tool.
+- It gathers fresh results and builds a response from the returned content.
 
-## Important Notes
+### Multi-tool reasoning
 
-- This project relies on external API keys for Gemini and Tavily.
-- Local document storage and vector indexing happen at runtime.
-- The app is meant for experimentation and custom research workflows rather than as a production-ready product out of the box.
-- Some package versions may require Python compatibility checks depending on the environment.
+The system can alternate between retrieval and search when a single source is not enough to fully answer a question.
 
-## Use Cases
+## Outputs and Logs
 
-This project is suitable for:
+The app records execution details including:
 
-- document Q&A assistants
-- research copilots
-- upload-and-query knowledge bases
-- web-backed AI assistants
-- multi-tool LLM workflows
+- tool used
+- query sent to the tool
+- result length
+- evaluation judgment
+- planner decision
+- final answer status
+
+This makes the project easier to debug and understand while it is running.
+
+## Notes
+
+- The app depends heavily on external API access for Gemini and Tavily.
+- Local indexing is performed at runtime and stored under the project data directories.
+- This is a research and prototyping project and may require environment-specific fixes depending on the machine and package versions.
+- Some dependencies may need version pinning depending on your Python environment.
 
 ## License
 
-A license file was not found in the repository. If this project is intended for public distribution, consider adding an open-source license such as MIT or Apache 2.0.
+This repository does not currently include a license file. If you plan to distribute or publish the project publicly, it is recommended to add an appropriate open-source license such as MIT or Apache 2.0.
 
-## Summary
+## Contributing
 
-This repository is a Python-based AI agent application that blends document retrieval, live web search, and iterative tool-based reasoning inside a Streamlit interface. It is a strong example of a lightweight agentic RAG app built for local question answering and research tasks.
+Contributions are welcome. If you want to extend the project:
+
+- add new tools to the agent workflow
+- improve the retrieval quality
+- add better prompt engineering
+- add support for more document formats
+- improve UI/UX and logging
+
+## Project Summary
+
+This repository is a lightweight but realistic example of an AI agent application built for research and document-grounded Q&A. It combines:
+
+- document ingestion
+- vector retrieval
+- LLM prompting
+- web search
+- tool reasoning
+- orchestrated agent decision-making
+
+It is well-suited as a foundation for building more advanced AI assistants, internal knowledge tools, or RAG-powered chat systems.
+
+## Contact
+
+For questions or collaboration, use the repository on GitHub:
+
+https://github.com/shahzaibkaramat67-coder/Agent_with_functions_flow_with_streamlit
 
